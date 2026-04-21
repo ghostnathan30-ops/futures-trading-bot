@@ -1,3 +1,4 @@
+import asyncio
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -19,6 +20,7 @@ from routes.snapshots import router as snapshots_router
 from routes.ml import router as ml_router
 from routes.backtest import router as backtest_router
 from websocket.manager import router as ws_router
+from websocket.broadcaster import run_broadcaster
 from db.connection import engine
 from sqlalchemy import text
 
@@ -61,7 +63,13 @@ async def _run_migrations():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await _run_migrations()
+    broadcaster_task = asyncio.create_task(run_broadcaster())
     yield
+    broadcaster_task.cancel()
+    try:
+        await broadcaster_task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(title="Futures Trading Bot API", version="1.0.0", lifespan=lifespan)
