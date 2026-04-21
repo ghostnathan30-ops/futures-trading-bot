@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface Tick { time: string; price: number; size: number; direction: "up" | "down"; exchange: string; }
 
@@ -25,32 +25,41 @@ export default function TimeSales({ instrument, basePrice }: { instrument: strin
   }, [basePrice]);
 
   return (
-    <div className="bg-[#1A1D24] border border-[#30363D] rounded flex flex-col h-full">
-      <div className="px-3 py-2 border-b border-[#30363D]">
-        <span className="text-[#8B949E] text-xs uppercase tracking-wider">Time & Sales — {instrument}</span>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        <table className="w-full text-xs">
-          <thead className="sticky top-0 bg-[#1A1D24]">
-            <tr className="text-[#484F58]">
-              <th className="text-left py-1 px-2">Time</th>
-              <th className="text-right py-1 px-2">Price</th>
-              <th className="text-right py-1 px-2">Size</th>
-              <th className="text-right py-1 px-2">Exch</th>
+    <div style={{ flex: 1, overflowY: "auto", height: "100%" }}>
+      <table style={{ width: "100%", fontSize: 11, borderCollapse: "collapse" }}>
+        <thead style={{ position: "sticky", top: 0, background: "var(--bg-surface, #080B12)" }}>
+          <tr>
+            <th style={{ textAlign: "left",  padding: "4px 8px", color: "var(--text-dim, #3D4760)", fontWeight: 500 }}>Time</th>
+            <th style={{ textAlign: "right", padding: "4px 8px", color: "var(--text-dim, #3D4760)", fontWeight: 500 }}>Price</th>
+            <th style={{ textAlign: "right", padding: "4px 8px", color: "var(--text-dim, #3D4760)", fontWeight: 500 }}>Size</th>
+            <th style={{ textAlign: "right", padding: "4px 8px", color: "var(--text-dim, #3D4760)", fontWeight: 500 }}>Exch</th>
+          </tr>
+        </thead>
+        <tbody>
+          {ticks.map((tick, i) => (
+            <tr key={i} style={{ borderBottom: "1px solid var(--border-dim, #1A2035)" }}>
+              <td style={{ padding: "2px 8px", fontFamily: "JetBrains Mono", color: "var(--text-secondary, #8892B0)" }}>
+                {tick.time}
+              </td>
+              <td style={{
+                padding: "2px 8px", fontFamily: "JetBrains Mono", textAlign: "right", fontWeight: 500,
+                color: tick.direction === "up" ? "var(--green, #00E5A0)" : "var(--red, #FF3A5C)",
+              }}>
+                {tick.price.toFixed(2)}
+              </td>
+              <td style={{
+                padding: "2px 8px", fontFamily: "JetBrains Mono", textAlign: "right",
+                color: tick.direction === "up" ? "var(--green, #00E5A0)" : "var(--red, #FF3A5C)",
+              }}>
+                {tick.size}
+              </td>
+              <td style={{ padding: "2px 8px", fontFamily: "JetBrains Mono", textAlign: "right", color: "var(--text-dim, #3D4760)" }}>
+                {tick.exchange}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {ticks.map((tick, i) => (
-              <tr key={i} className={`border-b border-[#30363D] ${tick.direction === "up" ? "text-[#00FF88]" : "text-[#FF4444]"}`}>
-                <td className="py-0.5 px-2 font-mono text-[#8B949E]">{tick.time}</td>
-                <td className="py-0.5 px-2 font-mono text-right font-medium">{tick.price.toFixed(2)}</td>
-                <td className="py-0.5 px-2 font-mono text-right">{tick.size}</td>
-                <td className="py-0.5 px-2 font-mono text-right text-[#484F58]">{tick.exchange}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
