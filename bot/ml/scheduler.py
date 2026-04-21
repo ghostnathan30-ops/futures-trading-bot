@@ -52,9 +52,19 @@ async def retrain_all(ib):
 
 
 def start_scheduler(ib):
-    """Start weekly retraining scheduler in background thread."""
+    """Start weekly retraining scheduler in background thread.
+
+    Uses run_coroutine_threadsafe() to submit retrain_all() onto the main
+    event loop, so all ib_insync calls stay on the correct loop.
+    """
+    loop = asyncio.get_running_loop()  # capture the main event loop
+
     def run_retrain():
-        asyncio.run(retrain_all(ib))
+        try:
+            future = asyncio.run_coroutine_threadsafe(retrain_all(ib), loop)
+            future.result(timeout=3600)  # blocks scheduler thread up to 1 hour
+        except Exception as e:
+            log.error(f"Scheduled retraining failed: {e}", exc_info=True)
 
     schedule.every().sunday.at("23:00").do(run_retrain)
 
