@@ -45,7 +45,7 @@ async def run_broadcaster():
                 # 1. Latest account snapshot → account_update
                 snap = await conn.fetchrow(
                     "SELECT net_liq, cash_balance, buying_power, unrealized_pnl, "
-                    "realized_pnl_today FROM account_snapshots ORDER BY created_at DESC LIMIT 1"
+                    "realized_pnl_today FROM account_snapshots ORDER BY ts DESC LIMIT 1"
                 )
                 if snap:
                     await broadcast("account_update", {
@@ -82,7 +82,7 @@ async def run_broadcaster():
                 # 3. New signals since last broadcast → signal_fired (incremental by id)
                 new_signals = await conn.fetch(
                     "SELECT id, instrument, direction, confluence_score, "
-                    "ml_confidence, fired, skip_reason, regime_state, created_at "
+                    "ml_confidence, fired, skip_reason, regime_state, ts "
                     "FROM signals WHERE id > $1 ORDER BY id ASC LIMIT 20",
                     _last_signal_id,
                 )
@@ -95,7 +95,7 @@ async def run_broadcaster():
                         "fired":         sig["fired"],
                         "skip_reason":   sig["skip_reason"],
                         "regime":        sig["regime_state"],
-                        "ts":            sig["created_at"].isoformat(),
+                        "ts":            sig["ts"].isoformat(),
                     })
                     _last_signal_id = sig["id"]
 
