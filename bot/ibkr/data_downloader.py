@@ -14,13 +14,17 @@ YFINANCE_SYMBOLS = {"ES": "ES=F", "NQ": "NQ=F", "GC": "GC=F"}
 
 
 async def download_ibkr_history(ib: IB, instrument: str, bar_size: str = "15 mins") -> pd.DataFrame:
-    """Pull up to 1 year of 15m bars from IBKR."""
+    """Pull up to 60 days of 15m bars from IBKR.
+
+    60 D keeps request size small and avoids timeouts outside market hours.
+    yfinance provides the longer historical window for ML training.
+    """
     log.info(f"Downloading IBKR history for {instrument} {bar_size}")
-    df = await get_bars(ib, instrument, bar_size, "365 D")
+    df = await get_bars(ib, instrument, bar_size, "60 D")
     return df
 
 
-def download_yfinance_history(instrument: str, period: str = "5y", interval: str = "1h") -> pd.DataFrame:
+def download_yfinance_history(instrument: str, period: str = "2y", interval: str = "1h") -> pd.DataFrame:
     """Pull multi-year hourly data from yfinance as supplement.
 
     Returns empty DataFrame if yfinance is unavailable or returns no data.
@@ -51,12 +55,12 @@ def download_yfinance_history(instrument: str, period: str = "5y", interval: str
 
 def merge_and_save(instrument: str, ibkr_df: pd.DataFrame, yf_df: pd.DataFrame) -> pd.DataFrame:
     """Merge IBKR (recent, accurate) + yfinance (long history) data."""
-    os.makedirs(MODEL_DIR, exist_ok=True)
-
     frames = [f for f in [yf_df, ibkr_df] if not f.empty]
     if not frames:
         log.warning(f"No data available for {instrument} — skipping save")
         return pd.DataFrame()
+
+    os.makedirs(MODEL_DIR, exist_ok=True)
 
     combined = pd.concat(frames).sort_index()
     combined = combined[~combined.index.duplicated(keep="last")]

@@ -62,7 +62,10 @@ ATR_TRAIL_DIST_MULT    = 1.0
 ML_MIN_CONFIDENCE = float(os.getenv("ML_MIN_CONFIDENCE", 0.65))
 ML_RETRAIN_DAYS = 7
 ML_LOOKBACK_YEARS = 3
-MODEL_DIR = os.getenv("MODEL_DIR", "/app/ml_models")
+MODEL_DIR = os.getenv(
+    "MODEL_DIR",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml_models"),
+)
 
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
