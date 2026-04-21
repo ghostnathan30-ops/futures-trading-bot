@@ -51,8 +51,8 @@ async def write_signal(instrument: str, result: dict, fired: bool, skip_reason: 
                 VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
             """,
             instrument, result.get("direction", "long"),
-            result.get("ema_signal"), result.get("macd_signal"), result.get("rsi_signal"),
-            result.get("vwap_signal"), result.get("delta_signal"),
+            bool(result.get("ema_signal")), bool(result.get("macd_signal")), bool(result.get("rsi_signal")),
+            bool(result.get("vwap_signal")), bool(result.get("delta_signal")),
             result.get("regime", "unknown"), result.get("score", 0),
             result.get("ml_confidence"), fired, skip_reason)
     except Exception as e:
