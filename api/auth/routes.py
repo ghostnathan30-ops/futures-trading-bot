@@ -17,7 +17,11 @@ class LoginRequest(BaseModel):
 def login(req: LoginRequest):
     if req.username != get_admin_username():
         raise HTTPException(status_code=401, detail="Invalid credentials")
-    if not verify_password(req.password, get_admin_hash()):
+    try:
+        admin_hash = get_admin_hash()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    if not verify_password(req.password, admin_hash):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     return {
         "access_token": create_access_token(req.username),

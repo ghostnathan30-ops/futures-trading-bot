@@ -44,7 +44,7 @@ def score_confluence(
         reasons.append("1H momentum ok")
 
     # 3. 15m: MACD bullish crossover
-    if r15["macd_hist"] > 0 and d15["macd_hist"].iloc[-2] <= 0:
+    if r15["macd_hist"] > 0 and len(d15) >= 2 and d15["macd_hist"].iloc[-2] <= 0:
         score += 1
         reasons.append("15m MACD crossover")
 
@@ -63,14 +63,50 @@ def score_confluence(
         score += 1
         reasons.append("not extended vs VWAP")
 
-    # Regime must be trending (hard gate — not scored)
+    # ── SHORT score (mirror of long signals) ────────────────────────────────
+    short_score = 0
+    short_reasons = []
+
+    # 1. 4H trend bearish: price below EMA50 and MACD negative
+    if r4["close"] < r4["ema50"] and r4["macd_hist"] < 0:
+        short_score += 1
+        short_reasons.append("4H trend bearish")
+
+    # 2. 1H: EMA20 < EMA50 and RSI 30-60
+    if r1["ema20"] < r1["ema50"] and 30 < r1["rsi"] < 60:
+        short_score += 1
+        short_reasons.append("1H momentum bearish")
+
+    # 3. 15m: MACD bearish crossover
+    if r15["macd_hist"] < 0 and len(d15) >= 2 and d15["macd_hist"].iloc[-2] >= 0:
+        short_score += 1
+        short_reasons.append("15m MACD bearish crossover")
+
+    # 4. Price below VWAP
+    if r15["close"] < r15["vwap"]:
+        short_score += 1
+        short_reasons.append("below VWAP")
+
+    # 5. Cumulative delta negative
+    if r15["cumulative_delta"] < 0:
+        short_score += 1
+        short_reasons.append("delta negative")
+
+    # 6. Not extended vs VWAP (same gate as long — avoids shorting into oversold)
+    if abs(r15.get("price_vs_vwap", 0)) < 2.0:
+        short_score += 1
+        short_reasons.append("not extended vs VWAP")
+
+    # Regime (informational — not a hard gate; engine applies regime-aware threshold)
     regime = regime_detector.predict(df_4h) if regime_detector._fitted else "trending"
 
     return {
         "score": score,
+        "short_score": short_score,
         "direction": "long",
         "regime": regime,
         "reasons": reasons,
+        "short_reasons": short_reasons,
         "ema_signal": score >= 1,
         "macd_signal": score >= 2,
         "rsi_signal": r15.get("rsi", 50) < 70,

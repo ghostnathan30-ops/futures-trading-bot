@@ -11,7 +11,13 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def get_admin_hash() -> str:
-    return os.getenv("ADMIN_PASSWORD_HASH", "")
+    h = os.getenv("ADMIN_PASSWORD_HASH", "")
+    if not h:
+        raise RuntimeError(
+            "ADMIN_PASSWORD_HASH env var is not set. "
+            "Generate one with: python -c \"import bcrypt; print(bcrypt.hashpw(b'yourpassword', bcrypt.gensalt(12)).decode())\""
+        )
+    return h
 
 
 def get_admin_username() -> str:

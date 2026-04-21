@@ -23,8 +23,11 @@ async def websocket_endpoint(ws: WebSocket, token: str = ""):
     try:
         while True:
             await ws.receive_text()
-    except WebSocketDisconnect:
-        _connections.remove(ws)
+    except (WebSocketDisconnect, Exception):
+        pass
+    finally:
+        if ws in _connections:
+            _connections.remove(ws)
         log.info(f"WebSocket disconnected. Total: {len(_connections)}")
 
 

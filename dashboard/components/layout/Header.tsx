@@ -1,80 +1,182 @@
 "use client";
 import { useEffect, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { api } from "@/lib/api";
 
-function PnlValue({ value }: { value: number }) {
-  const cls = value >= 0 ? "text-[#00FF88]" : "text-[#FF4444]";
+const C = {
+  bg:     "#080B12",
+  border: "#1A2035",
+  gold:   "#C9A84C",
+  green:  "#00E5A0",
+  red:    "#FF3A5C",
+  dim:    "#3D4760",
+  text:   "#8892B0",
+  white:  "#F0F4FF",
+};
+
+function Divider() {
+  return <div style={{ width: 1, height: 24, background: C.border, flexShrink: 0 }} />;
+}
+
+function ContractChip({ symbol }: { symbol: string }) {
   return (
-    <span className={`font-mono font-medium ${cls}`}>
-      {value >= 0 ? "+" : ""}${value.toLocaleString("en-US", {minimumFractionDigits: 2})}
-    </span>
+    <div style={{
+      padding: "3px 10px",
+      border: `1px solid ${C.border}`,
+      borderRadius: 4,
+      background: "rgba(255,255,255,0.02)",
+      fontFamily: "JetBrains Mono, monospace",
+      fontSize: 11,
+      fontWeight: 600,
+      color: C.white,
+      letterSpacing: "0.06em",
+    }}>
+      {symbol}
+    </div>
   );
 }
 
 export default function Header() {
-  const [account, setAccount] = useState<any>(null);
+  const [account, setAccount]     = useState<any>(null);
   const [connected, setConnected] = useState(false);
-  const [time, setTime] = useState(new Date());
+  const [time, setTime]           = useState<Date | null>(null);
 
   useEffect(() => {
-    const load = () => {
-      api.account().then(a => { setAccount(a); setConnected(true); }).catch(() => setConnected(false));
-      setTime(new Date());
+    setTime(new Date());
+    const clock = setInterval(() => setTime(new Date()), 1000);
+    const poll = () => {
+      // Health check is auth-free — drives the connection indicator
+      api.health()
+        .then(() => setConnected(true))
+        .catch(() => { setConnected(false); setAccount(null); });
+      // Account fetch is independent — auth failures don't mark the API as offline
+      api.account()
+        .then(a => setAccount(a))
+        .catch(() => setAccount(null));
     };
-    load();
-    const interval = setInterval(load, 5000);
-    return () => clearInterval(interval);
+    poll();
+    const poller = setInterval(poll, 5000);
+    return () => { clearInterval(clock); clearInterval(poller); };
   }, []);
 
-  const etTime = time.toLocaleTimeString("en-US", {timeZone:"America/New_York", hour12:false});
-  const isRTH = (() => {
-    const et = new Date(time.toLocaleString("en-US", {timeZone:"America/New_York"}));
-    const h = et.getHours(), m = et.getMinutes();
-    const mins = h * 60 + m;
-    return mins >= 570 && mins < 960;
-  })();
+  const etTime = time?.toLocaleTimeString("en-US", { timeZone: "America/New_York", hour12: false }) ?? null;
+  const isRTH = time ? (() => {
+    const et = new Date(time.toLocaleString("en-US", { timeZone: "America/New_York" }));
+    const m = et.getHours() * 60 + et.getMinutes();
+    return m >= 570 && m < 960;
+  })() : false;
+
+  const netLiq = account ? Number(account.net_liq ?? 0) : null;
+  const dayPnl = account
+    ? Number(account.realized_pnl_today ?? 0) + Number(account.unrealized_pnl ?? 0)
+    : null;
 
   return (
-    <header className="h-12 bg-[#1A1D24] border-b border-[#30363D] flex items-center px-4 gap-6 shrink-0">
-      <div className="flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${connected ? "bg-[#00FF88]" : "bg-[#FF4444]"}`} />
-        <span className="text-[#8B949E] text-xs">
-          {connected ? "IBKR Connected" : "Disconnected"}
+    <motion.header
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.4 }}
+      style={{
+        height: 52,
+        background: C.bg,
+        borderBottom: `1px solid ${C.border}`,
+        boxShadow: `0 1px 0 0 rgba(201,168,76,0.15)`,
+        display: "flex",
+        alignItems: "center",
+        padding: "0 20px",
+        gap: 20,
+        flexShrink: 0,
+        position: "relative",
+        zIndex: 50,
+      }}
+    >
+      {/* Brand mark */}
+      <div style={{ display: "flex", alignItems: "baseline", gap: 6, flexShrink: 0 }}>
+        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 700, fontSize: 14, color: C.gold, letterSpacing: "0.12em" }}>ALGO</span>
+        <span style={{ fontFamily: "JetBrains Mono", fontWeight: 400, fontSize: 9, color: C.dim, letterSpacing: "0.2em" }}>TERMINAL</span>
+      </div>
+
+      <Divider />
+
+      {/* Connection status */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <span className={`pulse-dot ${connected ? "green-dot" : "red-dot"}`} />
+        <span style={{ fontSize: 11, color: connected ? C.text : C.red, fontWeight: 500, letterSpacing: "0.05em" }}>
+          {connected ? "IBKR PAPER" : "OFFLINE"}
         </span>
       </div>
 
-      <div className="flex gap-3 text-xs font-mono text-[#8B949E]">
-        <span className="text-[#E6EDF3]">ESM6</span>
-        <span>|</span>
-        <span className="text-[#E6EDF3]">NQM6</span>
-        <span>|</span>
-        <span className="text-[#E6EDF3]">GCM6</span>
+      <Divider />
+
+      {/* Contract symbols */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <ContractChip symbol="ESM6" />
+        <ContractChip symbol="NQM6" />
+        <ContractChip symbol="GCM6" />
       </div>
 
-      <div className="flex items-center gap-2">
-        <span className={`text-xs px-1.5 py-0.5 rounded ${isRTH ? "bg-[#00FF88]/20 text-[#00FF88]" : "bg-[#21262D] text-[#8B949E]"}`}>
-          {isRTH ? "RTH" : "ETH"}
-        </span>
-        <span className="font-mono text-xs text-[#8B949E]">{etTime} ET</span>
-      </div>
+      {/* Spacer */}
+      <div style={{ flex: 1 }} />
 
-      <div className="flex-1" />
-
-      {account && (
-        <div className="flex items-center gap-2">
-          <span className="text-[#8B949E] text-xs">Net Liq</span>
-          <span className="font-mono font-semibold text-[#E6EDF3] text-sm">
-            ${Number(account.net_liq ?? 0).toLocaleString("en-US", {minimumFractionDigits: 2})}
+      {/* Session badge + clock */}
+      {etTime && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexShrink: 0 }}>
+          <span style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: "0.1em",
+            padding: "2px 7px",
+            borderRadius: 3,
+            border: `1px solid ${isRTH ? "rgba(0,229,160,0.3)" : C.border}`,
+            background: isRTH ? "rgba(0,229,160,0.08)" : "transparent",
+            color: isRTH ? C.green : C.dim,
+          }}>
+            {isRTH ? "RTH" : "ETH"}
+          </span>
+          <span style={{ fontFamily: "JetBrains Mono", fontSize: 12, color: C.text, letterSpacing: "0.04em" }}>
+            {etTime} <span style={{ color: C.dim, fontSize: 10 }}>ET</span>
           </span>
         </div>
       )}
 
-      {account && (
-        <div className="flex items-center gap-2">
-          <span className="text-[#8B949E] text-xs">Day P&L</span>
-          <PnlValue value={Number(account.realized_pnl_today ?? 0) + Number(account.unrealized_pnl ?? 0)} />
-        </div>
-      )}
-    </header>
+      <Divider />
+
+      {/* Net Liq */}
+      <AnimatePresence>
+        {netLiq !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}
+          >
+            <span style={{ fontSize: 9, color: C.dim, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Net Liq</span>
+            <span style={{ fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, color: C.gold, letterSpacing: "0.02em" }}>
+              ${netLiq.toLocaleString("en-US", { minimumFractionDigits: 0 })}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Divider />
+
+      {/* Day P&L */}
+      <AnimatePresence>
+        {dayPnl !== null && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", flexShrink: 0 }}
+          >
+            <span style={{ fontSize: 9, color: C.dim, letterSpacing: "0.12em", textTransform: "uppercase", fontWeight: 600 }}>Day P&L</span>
+            <span style={{
+              fontFamily: "JetBrains Mono", fontSize: 14, fontWeight: 700, letterSpacing: "0.02em",
+              color: dayPnl >= 0 ? C.green : C.red,
+            }}>
+              {dayPnl >= 0 ? "+" : "−"}${Math.abs(dayPnl).toLocaleString("en-US", { minimumFractionDigits: 2 })}
+            </span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.header>
   );
 }

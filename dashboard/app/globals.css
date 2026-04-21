@@ -1,23 +1,229 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
 
-:root { --font-mono: 'JetBrains Mono', monospace; }
+/* ─── Design Tokens ──────────────────────────────────────────── */
+:root {
+  --bg-base:     #04050A;
+  --bg-surface:  #080B12;
+  --bg-raised:   #0D1018;
+  --bg-hover:    #131825;
 
-body {
-  background-color: #0D1117;
-  color: #E6EDF3;
-  font-family: 'Inter', system-ui, sans-serif;
-  -webkit-font-smoothing: antialiased;
+  --border-dim:    #1A2035;
+  --border-mid:    #232B42;
+  --border-bright: #2E3A58;
+
+  --text-primary:   #F0F4FF;
+  --text-secondary: #8892B0;
+  --text-dim:       #3D4760;
+
+  --gold:      #C9A84C;
+  --gold-dim:  rgba(201,168,76,0.12);
+  --gold-glow: rgba(201,168,76,0.25);
+
+  --green:     #00E5A0;
+  --green-dim: rgba(0,229,160,0.12);
+
+  --red:       #FF3A5C;
+  --red-dim:   rgba(255,58,92,0.12);
+
+  --blue:      #4488FF;
+  --blue-dim:  rgba(68,136,255,0.12);
 }
 
-::-webkit-scrollbar { width: 6px; height: 6px; }
-::-webkit-scrollbar-track { background: #0D1117; }
-::-webkit-scrollbar-thumb { background: #30363D; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #484F58; }
+/* ─── Base ───────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-.mono { font-family: var(--font-mono); }
-.positive { color: #00FF88; }
-.negative { color: #FF4444; }
-.warning  { color: #F0A500; }
+html, body {
+  height: 100%;
+  background: var(--bg-base);
+  color: var(--text-primary);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scanline texture overlay */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0, 0, 0, 0.03) 2px,
+    rgba(0, 0, 0, 0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 9999;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 2px; opacity: 0.5; }
+::-webkit-scrollbar-thumb:hover { background: #E0C060; }
+
+/* ─── Typography helpers ─────────────────────────────────────── */
+.mono { font-family: 'JetBrains Mono', monospace; }
+.gold { color: var(--gold); }
+.green { color: var(--green); }
+.red { color: var(--red); }
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+/* ─── Keyframe animations ────────────────────────────────────── */
+
+/* Pulsing status ring */
+@keyframes pulse-ring {
+  0%   { transform: scale(1);   opacity: 0.8; }
+  70%  { transform: scale(2.4); opacity: 0; }
+  100% { transform: scale(1);   opacity: 0; }
+}
+
+/* Shimmer sweep for loading skeletons */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
+/* Slow glow breath for active cards */
+@keyframes glow-breath {
+  0%, 100% { box-shadow: 0 0 0 0 var(--gold-glow); }
+  50%       { box-shadow: 0 0 20px 4px var(--gold-glow); }
+}
+
+/* Subtle float */
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-3px); }
+}
+
+/* Data blink for live ticks */
+@keyframes tick-flash {
+  0%  { background: rgba(201,168,76,0.3); }
+  100%{ background: transparent; }
+}
+
+/* ─── Utility classes ────────────────────────────────────────── */
+.pulse-dot {
+  position: relative;
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+.pulse-dot::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+}
+.pulse-dot.green-dot { background: var(--green); }
+.pulse-dot.green-dot::before { background: var(--green); }
+.pulse-dot.red-dot { background: var(--red); }
+.pulse-dot.red-dot::before { background: var(--red); }
+.pulse-dot.gold-dot { background: var(--gold); }
+.pulse-dot.gold-dot::before { background: var(--gold); }
+
+.shimmer-bg {
+  background: linear-gradient(
+    90deg,
+    var(--bg-raised) 25%,
+    var(--border-dim) 50%,
+    var(--bg-raised) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ─── Card system ────────────────────────────────────────────── */
+.q-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-dim);
+  border-radius: 6px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.q-card:hover {
+  border-color: var(--border-mid);
+  box-shadow: 0 0 0 1px var(--border-dim), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.q-card-gold {
+  border-top: 1px solid var(--gold);
+  box-shadow: 0 -1px 0 0 var(--gold-glow), inset 0 1px 0 rgba(201,168,76,0.06);
+}
+
+/* ─── Table ──────────────────────────────────────────────────── */
+.q-table { width: 100%; border-collapse: collapse; }
+.q-table th {
+  padding: 8px 12px;
+  text-align: left;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  border-bottom: 1px solid var(--border-dim);
+}
+.q-table td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--border-dim);
+  font-size: 12px;
+}
+.q-table tr:last-child td { border-bottom: none; }
+.q-table tr:hover td { background: var(--bg-raised); }
+
+/* ─── Range input (gold thumb) ───────────────────────────────── */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 3px;
+  background: var(--border-mid);
+  border-radius: 2px;
+  outline: none;
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--gold);
+  cursor: pointer;
+  box-shadow: 0 0 6px var(--gold-glow);
+}
+
+/* ─── Toggle switch ──────────────────────────────────────────── */
+.q-toggle {
+  position: relative;
+  width: 36px; height: 20px;
+  border-radius: 10px;
+  border: 1px solid var(--border-mid);
+  background: var(--bg-raised);
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  flex-shrink: 0;
+}
+.q-toggle.on {
+  background: var(--gold-dim);
+  border-color: var(--gold);
+  box-shadow: 0 0 8px var(--gold-glow);
+}
+.q-toggle::after {
+  content: '';
+  position: absolute;
+  top: 3px; left: 3px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--text-dim);
+  transition: transform 0.2s, background 0.2s;
+}
+.q-toggle.on::after {
+  transform: translateX(16px);
+  background: var(--gold);
+}

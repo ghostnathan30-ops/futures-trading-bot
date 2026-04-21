@@ -97,6 +97,14 @@ async def _evaluate_instrument(ib: IB, instrument: str, equity: float):
         entry_price=result["close"],
         stop_loss=order["stop_loss"],
         take_profit=order["take_profit"],
+        trade_meta={
+            "ml_confidence":  result.get("ml_confidence"),
+            "regime_state":   result.get("regime"),
+            "delta_at_entry": result.get("delta"),
+            "vwap_at_entry":  result.get("vwap"),
+            "atr_at_entry":   result.get("atr"),
+            "kelly_fraction": order.get("kelly_fraction"),
+        },
     )
     await write_signal(instrument, result, fired=True, skip_reason=None)
     log.info(f"Trade placed: {instrument} {order['contracts']} contracts @ {result['close']}")

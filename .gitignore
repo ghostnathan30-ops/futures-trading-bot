@@ -3,7 +3,11 @@ __pycache__/
 *.pyc
 *.egg-info/
 .venv/
+api/venv/
+bot/venv/
 node_modules/
 .next/
 *.log
 ml_models/*.pkl
+bot/data/*.parquet
+.DS_Store
