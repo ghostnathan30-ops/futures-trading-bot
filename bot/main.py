@@ -30,7 +30,7 @@ async def main():
             _log.error(f"Initial ML training failed (non-fatal): {e}", exc_info=True)
 
     start_scheduler(ib)
-    await run_strategy_loop()
+    await run_strategy_loop(ib)
 
 
 if __name__ == "__main__":

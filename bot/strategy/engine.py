@@ -2,7 +2,7 @@ import asyncio
 import logging
 from datetime import datetime, timezone
 from ib_insync import IB
-from ibkr.connection import connect, ensure_connected
+from ibkr.connection import ensure_connected
 from ibkr.market_data import get_bars
 from ibkr.account_monitor import get_account_values
 from ibkr.order_manager import place_bracket_order
@@ -21,8 +21,7 @@ pairs = PairsMonitor()
 regimes = {instr: RegimeDetector() for instr in INSTRUMENTS}
 
 
-async def run_strategy_loop():
-    ib = await connect()
+async def run_strategy_loop(ib: IB):
     log.info("Strategy engine started")
 
     # Initial regime fit
@@ -33,7 +32,7 @@ async def run_strategy_loop():
             log.info(f"Regime detector fitted for {instr}")
 
     while True:
-        await ensure_connected()
+        ib = await ensure_connected(ib)
         try:
             account = await get_account_values(ib)
             equity = account["net_liq"]
