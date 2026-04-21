@@ -11,11 +11,25 @@ from config import MODEL_DIR
 
 log = logging.getLogger(__name__)
 
-def train_model(instrument: str, df: pd.DataFrame) -> dict:
+
+def train_model(
+    instrument: str,
+    df: pd.DataFrame,
+    df_daily: pd.DataFrame = None,
+) -> dict:
+    """Train LightGBM classifier with time-series cross-validation.
+
+    Args:
+        instrument: Instrument name (ES, NQ, GC).
+        df: Full intraday OHLCV history (merged from all sources).
+        df_daily: Optional daily bars for daily-context features.
+                  If None, daily feature columns default to 0 (neutral).
+    """
     log.info(f"Training ML model for {instrument} on {len(df)} rows")
-    features_df = build_features(df)
+    features_df = build_features(df, df_daily=df_daily, regime="trending")
     X = features_df[FEATURE_COLS]
     y = features_df["target"]
+
     tscv = TimeSeriesSplit(n_splits=5)
     fold_metrics = []
     model = lgb.LGBMClassifier(
@@ -31,14 +45,23 @@ def train_model(instrument: str, df: pd.DataFrame) -> dict:
                   callbacks=[lgb.early_stopping(50, verbose=False)])
         preds = model.predict(X_val)
         fold_metrics.append({
-            "accuracy": accuracy_score(y_val, preds),
+            "accuracy":  accuracy_score(y_val, preds),
             "precision": precision_score(y_val, preds, zero_division=0),
-            "recall": recall_score(y_val, preds, zero_division=0),
-            "f1": f1_score(y_val, preds, zero_division=0),
+            "recall":    recall_score(y_val, preds, zero_division=0),
+            "f1":        f1_score(y_val, preds, zero_division=0),
         })
+
+    # Final fit on all data
     model.fit(X, y)
+
+    # Log top features by importance
+    importance = dict(zip(FEATURE_COLS, model.feature_importances_))
+    top5 = sorted(importance.items(), key=lambda x: -x[1])[:5]
+    log.info(f"Top-5 features for {instrument}: {top5}")
+
     os.makedirs(MODEL_DIR, exist_ok=True)
     path = os.path.join(MODEL_DIR, f"{instrument}_lgbm.pkl")
     joblib.dump(model, path)
+
     avg = {k: float(np.mean([m[k] for m in fold_metrics])) for k in fold_metrics[0]}
     return {**avg, "model_path": path, "n_features": len(FEATURE_COLS), "n_samples": len(X)}

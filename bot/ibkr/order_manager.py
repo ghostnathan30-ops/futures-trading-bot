@@ -19,6 +19,7 @@ async def place_bracket_order(
     stop_loss: float,
     take_profit: float,
     trade_meta: dict | None = None,
+    risk_callback=None,  # callable(won: bool, pnl: float) — called on fill
 ) -> list:
     """Place a bracket order (entry + stop + target) on IBKR.
 
@@ -50,11 +51,12 @@ async def place_bracket_order(
     if parent_trade is not None:
         meta = trade_meta or {}
         _open_positions[instrument] = {
-            "entry_price": entry_price,
-            "entry_ts": datetime.now(timezone.utc),
-            "side": action,
-            "quantity": quantity,
-            "contract": CONTRACT_MONTHS.get(instrument, ""),
+            "entry_price":   entry_price,
+            "entry_ts":      datetime.now(timezone.utc),
+            "side":          action,
+            "quantity":      quantity,
+            "contract":      CONTRACT_MONTHS.get(instrument, ""),
+            "risk_callback": risk_callback,
             **meta,
         }
         for trade in trades[1:]:   # child orders = stop & target
@@ -77,6 +79,14 @@ def _make_fill_handler(instrument: str, trade: Trade):
 
         exit_reason = "stop_loss" if trade.order.orderType == "STP" else "take_profit"
         log.info(f"Fill: {instrument} {exit_reason} @ {exit_price:.2f}  P&L={pnl:.2f}")
+
+        # Update Kelly stats from this trade outcome
+        cb = pos.get("risk_callback")
+        if cb is not None:
+            try:
+                cb(won=(pnl > 0), pnl=abs(pnl))
+            except Exception:
+                pass
 
         await write_trade({
             "instrument":    instrument,

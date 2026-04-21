@@ -3,20 +3,34 @@ import pandas as pd
 import joblib
 from hmmlearn.hmm import GaussianHMM
 
+
 class RegimeDetector:
     STATE_LABELS = ["ranging", "trending", "volatile"]
 
     def __init__(self, n_states: int = 3):
         self.n_states = n_states
-        self.model = GaussianHMM(n_components=n_states, covariance_type="diag", n_iter=1000, random_state=42)
+        self.model = GaussianHMM(
+            n_components=n_states,
+            covariance_type="diag",
+            n_iter=1000,
+            tol=1e-3,        # relaxed tolerance — cosmetic convergence warning suppressed
+            random_state=42,
+        )
         self._state_map: dict = {}
         self._fitted = False
 
     def _features(self, df: pd.DataFrame) -> np.ndarray:
-        returns = df["close"].pct_change().fillna(0)
-        vol = returns.rolling(20).std().fillna(returns.std())
-        momentum = returns.rolling(10).mean().fillna(0)
-        return np.column_stack([returns, vol, momentum])
+        returns    = df["close"].pct_change().fillna(0)
+        vol        = returns.rolling(20).std().fillna(returns.std())
+        momentum   = returns.rolling(10).mean().fillna(0)
+        # 4th feature: volume ratio (current volume vs 20-bar average)
+        # Gives HMM a structural signal beyond pure price dynamics
+        if "volume" in df.columns and df["volume"].sum() > 0:
+            vol_ratio = (df["volume"] / df["volume"].rolling(20).mean()
+                         .replace(0, 1)).fillna(1.0).clip(0, 10)
+        else:
+            vol_ratio = pd.Series(1.0, index=df.index)
+        return np.column_stack([returns, vol, momentum, vol_ratio])
 
     def fit(self, df: pd.DataFrame) -> "RegimeDetector":
         X = self._features(df)
@@ -27,11 +41,15 @@ class RegimeDetector:
 
     def _map_states(self, df: pd.DataFrame):
         X = self._features(df)
-        states = self.model.predict(X)
+        states  = self.model.predict(X)
         returns = df["close"].pct_change().fillna(0)
-        vols = {s: returns[states == s].std() for s in range(self.n_states)}
+        vols    = {s: returns[states == s].std() for s in range(self.n_states)}
         sorted_states = sorted(vols, key=lambda s: vols[s])
-        self._state_map = {sorted_states[0]: "ranging", sorted_states[1]: "trending", sorted_states[2]: "volatile"}
+        self._state_map = {
+            sorted_states[0]: "ranging",
+            sorted_states[1]: "trending",
+            sorted_states[2]: "volatile",
+        }
 
     def predict(self, df: pd.DataFrame) -> str:
         if not self._fitted:
@@ -47,7 +65,7 @@ class RegimeDetector:
     def load(cls, path: str) -> "RegimeDetector":
         data = joblib.load(path)
         d = cls()
-        d.model = data["model"]
+        d.model      = data["model"]
         d._state_map = data["state_map"]
-        d._fitted = True
+        d._fitted    = True
         return d

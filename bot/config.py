@@ -67,5 +67,19 @@ MODEL_DIR = os.getenv(
     os.path.join(os.path.dirname(os.path.abspath(__file__)), "ml_models"),
 )
 
+# Per-instrument ML confidence thresholds (override ML_MIN_CONFIDENCE via env)
+ML_CONFIDENCE_THRESHOLDS = {
+    "ES": float(os.getenv("ML_CONFIDENCE_ES", ML_MIN_CONFIDENCE)),
+    "NQ": float(os.getenv("ML_CONFIDENCE_NQ", ML_MIN_CONFIDENCE)),
+    "GC": float(os.getenv("ML_CONFIDENCE_GC", ML_MIN_CONFIDENCE)),
+}
+
+# Data sources
+NASDAQ_API_KEY = os.getenv("NASDAQ_API_KEY", "")  # free signup at data.nasdaq.com
+NASDAQ_SYMBOLS = {"ES": "CHRIS/CME_ES1", "NQ": "CHRIS/CME_NQ1", "GC": "CHRIS/CME_GC1"}
+
+# Risk limits
+MAX_CONTRACTS = int(os.getenv("MAX_CONTRACTS", 5))  # hard cap per instrument
+
 # Logging
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
