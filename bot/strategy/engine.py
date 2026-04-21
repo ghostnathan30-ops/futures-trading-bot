@@ -24,12 +24,18 @@ regimes = {instr: RegimeDetector() for instr in INSTRUMENTS}
 async def run_strategy_loop(ib: IB):
     log.info("Strategy engine started")
 
-    # Initial regime fit
+    # Initial regime fit — non-fatal; bot trades without regime filtering
+    # if IBKR data is unavailable at startup (e.g. outside market hours)
     for instr in INSTRUMENTS:
-        df = await get_bars(ib, instr, "1 hour", "365 D")
-        if not df.empty:
-            regimes[instr].fit(df)
-            log.info(f"Regime detector fitted for {instr}")
+        try:
+            df = await get_bars(ib, instr, "1 hour", "90 D")
+            if not df.empty:
+                regimes[instr].fit(df)
+                log.info(f"Regime detector fitted for {instr}")
+            else:
+                log.warning(f"No 1h bars for {instr} — regime detector using default state")
+        except Exception as e:
+            log.warning(f"Regime fit failed for {instr} (non-fatal): {e}")
 
     while True:
         ib = await ensure_connected(ib)

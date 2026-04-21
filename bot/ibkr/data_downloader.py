@@ -9,7 +9,8 @@ from config import MODEL_DIR
 
 log = logging.getLogger(__name__)
 
-YFINANCE_SYMBOLS = {"ES": "/ES=F", "NQ": "/NQ=F", "GC": "/GC=F"}
+# Standard continuous-futures symbols for yfinance (no leading slash)
+YFINANCE_SYMBOLS = {"ES": "ES=F", "NQ": "NQ=F", "GC": "GC=F"}
 
 
 async def download_ibkr_history(ib: IB, instrument: str, bar_size: str = "15 mins") -> pd.DataFrame:
@@ -20,10 +21,29 @@ async def download_ibkr_history(ib: IB, instrument: str, bar_size: str = "15 min
 
 
 def download_yfinance_history(instrument: str, period: str = "5y", interval: str = "1h") -> pd.DataFrame:
-    """Pull multi-year hourly data from yfinance as supplement."""
+    """Pull multi-year hourly data from yfinance as supplement.
+
+    Returns empty DataFrame if yfinance is unavailable or returns no data.
+    Handles yfinance >=0.2.x MultiIndex columns (('Close', 'ES=F') tuples).
+    """
     symbol = YFINANCE_SYMBOLS[instrument]
     log.info(f"Downloading yfinance history for {symbol}")
-    df = yf.download(symbol, period=period, interval=interval, auto_adjust=True)
+    try:
+        df = yf.download(symbol, period=period, interval=interval,
+                         auto_adjust=True, progress=False)
+    except Exception as e:
+        log.warning(f"yfinance download failed for {symbol}: {e}")
+        return pd.DataFrame()
+
+    if df.empty:
+        log.warning(f"yfinance returned no data for {symbol}")
+        return pd.DataFrame()
+
+    # yfinance >=0.2.x returns MultiIndex columns: ('Close', 'ES=F')
+    # Flatten to plain strings before lowercasing
+    if isinstance(df.columns, pd.MultiIndex):
+        df.columns = df.columns.get_level_values(0)
+
     df.columns = [c.lower() for c in df.columns]
     df.index = pd.to_datetime(df.index, utc=True)
     return df
@@ -32,11 +52,14 @@ def download_yfinance_history(instrument: str, period: str = "5y", interval: str
 def merge_and_save(instrument: str, ibkr_df: pd.DataFrame, yf_df: pd.DataFrame) -> pd.DataFrame:
     """Merge IBKR (recent, accurate) + yfinance (long history) data."""
     os.makedirs(MODEL_DIR, exist_ok=True)
-    if not ibkr_df.empty:
-        combined = pd.concat([yf_df, ibkr_df]).sort_index()
-        combined = combined[~combined.index.duplicated(keep="last")]
-    else:
-        combined = yf_df
+
+    frames = [f for f in [yf_df, ibkr_df] if not f.empty]
+    if not frames:
+        log.warning(f"No data available for {instrument} — skipping save")
+        return pd.DataFrame()
+
+    combined = pd.concat(frames).sort_index()
+    combined = combined[~combined.index.duplicated(keep="last")]
 
     path = os.path.join(MODEL_DIR, f"{instrument}_history.parquet")
     combined.to_parquet(path)
