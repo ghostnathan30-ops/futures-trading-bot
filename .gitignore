@@ -17,10 +17,14 @@ api/venv/
 bot/venv/
 *.log
 
-# ML models (large binary files)
+# ML models and data (large binary files — not committed)
 ml_models/*.pkl
+ml_models/*.parquet
 bot/ml_models/*.pkl
+bot/ml_models/*.parquet
+bot/ml_models/*.h5
 api/ml_models/*.pkl
+api/ml_models/*.parquet
 
 # Data files
 bot/data/*.parquet
