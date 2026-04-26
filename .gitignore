@@ -1,13 +1,41 @@
+# Secrets — NEVER commit
 .env
+*.key
+*.pem
+*.secret
+
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
+*.pyo
 *.egg-info/
+dist/
+build/
 .venv/
+venv/
 api/venv/
 bot/venv/
-node_modules/
-.next/
 *.log
+
+# ML models (large binary files)
 ml_models/*.pkl
+bot/ml_models/*.pkl
+api/ml_models/*.pkl
+
+# Data files
 bot/data/*.parquet
+bot/data/*.csv
+
+# Next.js
+.next/
+out/
+node_modules/
+
+# OS
 .DS_Store
+Thumbs.db
+
+# Editor / tools
+.vscode/
+.idea/
+.claude/

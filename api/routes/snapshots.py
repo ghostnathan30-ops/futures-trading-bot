@@ -15,7 +15,7 @@ async def get_snapshots(
 ):
     result = await db.execute(
         text("""SELECT ts, net_liq FROM account_snapshots
-                WHERE ts > NOW() - (:hours || ' hours')::INTERVAL
+                WHERE ts > NOW() - MAKE_INTERVAL(hours => :hours)
                 ORDER BY ts"""),
         {"hours": hours},
     )

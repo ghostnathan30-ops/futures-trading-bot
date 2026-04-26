@@ -19,6 +19,7 @@ from routes.bot import router as bot_router
 from routes.snapshots import router as snapshots_router
 from routes.ml import router as ml_router
 from routes.backtest import router as backtest_router
+from routes.charts import router as charts_router
 from websocket.manager import router as ws_router
 from websocket.broadcaster import run_broadcaster
 from db.connection import engine
@@ -84,7 +85,7 @@ app.add_middleware(
 
 for router in [auth_router, account_router, positions_router, trades_router,
                signals_router, performance_router, bot_router, snapshots_router,
-               ml_router, backtest_router, ws_router]:
+               ml_router, backtest_router, charts_router, ws_router]:
     app.include_router(router)
 
 

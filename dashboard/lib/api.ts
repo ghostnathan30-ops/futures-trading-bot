@@ -73,6 +73,10 @@ export const api = {
   signals:     () => apiFetch<any[]>("/signals"),
   performance: () => apiFetch<any>("/performance"),
   snapshots:   (hours=24) => apiFetch<any[]>(`/snapshots?hours=${hours}`),
+  chartBars: (instrument: string, timeframe: string, limit = 200) =>
+    apiFetch<{ time: number; open: number; high: number; low: number; close: number; volume: number }[]>(
+      `/charts/bars?instrument=${instrument}&timeframe=${timeframe}&limit=${limit}`
+    ),
   botState:    () => apiFetch<any>("/bot"),
   updateBot:   (data: any) => apiFetch<any>("/bot", {method:"POST", body:JSON.stringify(data)}),
   killSwitch:  () => apiFetch<any>("/bot/kill", {method:"POST"}),

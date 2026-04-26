@@ -100,7 +100,7 @@ function SignalRow({ s, i }: { s: any; i: number }) {
       }}>
         {s.fired ? "FIRED" : "SKIP"}
       </span>
-      {!s.fired && <span style={{ color: C.dim, fontSize: 10, flex: 1, truncate: "true" }}>{s.skip_reason}</span>}
+      {!s.fired && <span style={{ color: C.dim, fontSize: 10, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{s.skip_reason}</span>}
       <span style={{ marginLeft: "auto", fontFamily: "JetBrains Mono", color: C.dim, fontSize: 10, flexShrink: 0 }}>
         {s.confluence_score}/6
       </span>
